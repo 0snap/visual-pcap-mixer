@@ -88,7 +88,7 @@ Navigate to the `frontend` folder and fire it up. you need a moderately new vers
 
 Go to your browser, `localhost:3000`. When you did the config right the browser content looks somewhat like this:
 
-[[https://github.com/0ortmann/visual-pcap-mixer/blob/master/screenshots/configured-contents.png|alt=configured-contents]]
+![configured-contents](https://raw.githubusercontent.com/0ortmann/visual-pcap-mixer/master/screenshots/configured-contents.png)
 
 #### In browser use
 
@@ -109,7 +109,7 @@ When you create an attack scenario the following will happen *on your computer*:
 
 Depending on your traffic samples that may fill your harddrive. again, be careful where you run this. better dont. NEVER HOST THIS ON A PUBLIC SERVER. it gives away cmd. 
 
-[[https://github.com/0ortmann/visual-pcap-mixer/blob/master/screenshots/configured-contents.png|alt=configured-contents]]
+![scenario-creation](https://raw.githubusercontent.com/0ortmann/visual-pcap-mixer/master/screenshots/scenario-creation.png)
 
 
 
