@@ -67,6 +67,18 @@ Btw, nice dataset for attack & benign traffic here: https://www.unb.ca/cic/datas
 
 ## When you really really want to use this
 
+Install dependencies:
+
+    $ go get github.com/spf13/cobra
+
+Install packages for your linux distro. The go wrapper calls them.
+
+- `wireshark` (needed: `capinfos`)
+- `tcpdump`. in case you are on debian/ubuntu make sure that it can be used by your user. if you have app-armor in place and it blocks you, here is a guide https://gcplinux.com/tcpdump-permission-denied-running-as-root/
+- `tcpreplay` (needed `tcprewrite`)
+
+Init app
+
 - add the `backend` folder to your go path
 - build your own `config.json` file like above
 - check the help menu `go run main.go`
