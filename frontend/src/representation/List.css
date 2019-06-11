@@ -1,0 +1,41 @@
+.List {
+    height: 100%;
+    float: left;
+    min-width: 49%;
+    max-width: 50%;
+    text-align: left;
+    overflow: hidden;
+}
+
+ul {
+    margin: 5px;
+    list-style: none;
+    height: 70%;
+    overflow-y: auto;
+}
+
+li {
+    background-color: #6a6a6a;
+    padding: 5px;
+    width: 90%;
+    margin: 4px 0px;
+    transition: 0.3s;
+}
+
+li span {
+    padding: 0 15px;
+}
+
+.enabled:hover {
+    opacity: 0.8;
+    color: #38383d;
+    background-color: white;
+}
+
+.enabled:hover .tooltip {
+    opacity: 1;
+}
+
+.disabled {
+    opacity: 0.5;
+}

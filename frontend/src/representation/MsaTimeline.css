@@ -1,0 +1,85 @@
+.MsaTimelinePanel {
+    height: 100%;
+    overflow: hidden;
+}
+.MsaTimeline {
+    white-space: nowrap;
+    padding: 30px;
+    width: 95%;
+    height: 55%;
+    overflow: auto;
+}
+
+.MsaTimeline form {
+    vertical-align: top;
+    margin-left: 20px;
+    height: 160px;
+    width: 160px;
+    display: inline-block;
+}
+
+.MsaTimelineEntry {
+    -webkit-user-drag: element;
+    border: 1px solid white;
+    background-color: #373737;
+    padding: 10px;
+}
+
+.MsaTimelineEntry .tooltip {
+    margin-top: 20px;
+    border: 1px solid white;
+    padding: 8px 16px 8px 8px;
+    text-align: left;
+    position: absolute;
+    color: white;
+    background-color: #373737;
+    opacity: 0;
+    border-radius: 5px;
+    transition: 0.3s;
+    z-index: -1;
+}
+
+.MsaTimelineEntry:hover .tooltip {
+    opacity: 1;
+    z-index: 1;
+}
+
+.TraceFileDescription {
+    margin: 8px 0;
+}
+
+.TraceFileDescription span {
+    display: block;
+}
+
+.attack {
+    background-color: #9a0000;
+}
+
+.MsaTimelineDay {
+    border: 1px solid white;
+    display: inline-block;
+    vertical-align: top;
+    width: 150px;
+    margin: 0 5px;
+    min-height: 280px;
+}
+
+.MsaTimelineDay h3 {
+    margin: 0 5px;
+}
+
+.MsaTimelineAddDayBtn {
+    border-radius: 50%;
+    width: 140px;
+    height: 140px;
+    font-size: 100px;
+    color: gray;
+    outline: none;
+    opacity: 0.7;
+}
+
+.MsaTimelineAddDayBtn:hover{
+    opacity: 1;
+}
+
