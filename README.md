@@ -54,9 +54,7 @@ Btw, nice dataset for attack & benign traffic here: https://www.unb.ca/cic/datas
                     "end": "2018-02-28T14:40:00-04:00"
                 }
             ]
-        },
-        
-
+        }
     ],
     "unclassifiedTraffic": [
         "/home/you/pcaps/unbca/benign/22-02-2018",
