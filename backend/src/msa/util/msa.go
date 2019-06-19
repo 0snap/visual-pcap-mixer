@@ -42,10 +42,6 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 	msa.TraceFiles = make(types.TraceFiles)
 	msa.Attacks = make(types.Attacks)
 
-	firstDay := msar.TimeLine[0]
-	firstEntry := firstDay[0]
-	prevTraceFile := config.TraceFiles[firstEntry.Id]
-
 	msa.TimeLine = make([]types.TimeLineDay, len(msar.TimeLine))
 	for i := range msa.TimeLine {
 		msa.TimeLine[i] = make([]types.TimeLineEntry, len(msar.TimeLine[i]))
@@ -53,28 +49,13 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 
 	var tf types.TraceFile
 
-	// copy first bunch of pcaps
+	firstDay := msar.TimeLine[0]
+	firstEntry := firstDay[0]
+	prevTraceFile := config.TraceFiles[firstEntry.Id]
 	if firstEntry.Type == "attack" {
 		atk := config.Attacks[firstEntry.Id]
-		for _, tfId := range atk.Traces {
-			tf, err = copyTraceFile(config.TraceFiles[tfId], outPath)
-			if err != nil {
-				return
-			}
-			msa.TraceFiles[tf.Id] = tf
-		}
 		lastId := atk.Traces[len(atk.Traces)-1]
 		prevTraceFile = config.TraceFiles[lastId]
-		atk.Id = atk.Hash()
-		msa.Attacks[atk.Id] = atk
-		msa.TimeLine[0][0] = types.TimeLineEntry{"attack", atk.Id}
-	} else {
-		prevTraceFile, err = copyTraceFile(prevTraceFile, outPath)
-		if err != nil {
-			return
-		}
-		msa.TraceFiles[prevTraceFile.Id] = prevTraceFile
-		msa.TimeLine[0][0] = types.TimeLineEntry{"traceFile", prevTraceFile.Id}
 	}
 
 	currentDate := prevTraceFile.FirstPacket
@@ -101,7 +82,7 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 				msa.TimeLine[i][e] = types.TimeLineEntry{"attack", atk.Id}
 			}
 		}
-		currentDate.Add(time.Hour * 24)
+		currentDate = currentDate.Add(time.Hour * 24)
 	}
 
 	// IP address replacements
