@@ -113,7 +113,7 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 					if err != nil {
 						return
 					}
-					removeFile(msa.TraceFiles[entry.Id].Path, config.OutPath)
+					removeFile(msa.TraceFiles[entry.Id].Path, outPath)
 					delete(msa.TraceFiles, entry.Id)
 					msa.TraceFiles[tf.Id] = tf
 					msa.TimeLine[i][e] = types.TimeLineEntry{"traceFile", tf.Id}
@@ -127,7 +127,7 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 						msa.TraceFiles[tf.Id] = tf
 					}
 					for _, oldAtkTrace := range msa.Attacks[entry.Id].Traces {
-						removeFile(msa.TraceFiles[oldAtkTrace].Path, config.OutPath)
+						removeFile(msa.TraceFiles[oldAtkTrace].Path, outPath)
 						delete(msa.TraceFiles, oldAtkTrace)
 					}
 					delete(msa.Attacks, entry.Id)
