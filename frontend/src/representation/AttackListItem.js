@@ -24,6 +24,7 @@ class AttackListItem extends Component {
             <li id={id} className={classes} draggable={true} onDragStart={this.drag}>
                 <span>{name}</span>
                 <span>[{attackers}]&nbsp;&nbsp;&nbsp;{'→'}&nbsp;&nbsp;&nbsp;[{victims}]</span>
+                <br/>
                 <span>{moment(start).format(constants.TIME_FORMAT)}&nbsp;&nbsp;&nbsp;{'→'}&nbsp;&nbsp;&nbsp;{moment(end).format(constants.TIME_FORMAT)}</span>
             </li>
         );

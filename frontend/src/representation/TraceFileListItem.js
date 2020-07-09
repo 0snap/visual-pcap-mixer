@@ -24,7 +24,8 @@ class TraceFileListItem extends Component {
             <li className={classes} id={id} draggable={true} onDragStart={this.drag}>
                 <span>{mostFrequentIp}</span>
                 <span>{moment(firstPacket).format(constants.TIME_FORMAT)}&nbsp;&nbsp;&nbsp;{'→'}&nbsp;&nbsp;&nbsp;{moment(lastPacket).format(constants.TIME_FORMAT)}</span>
-                <span>{packets}&nbsp;pkt</span>
+                <br/>
+                <span>Total {packets}&nbsp;pkt</span>
                 <span>{packetsPerSecond}&nbsp;pkt/s</span>
             </li>
         );
