@@ -17,4 +17,4 @@ class MsaApi {
             })
     }
 }
-export default MsaApi; 
+export default MsaApi;
