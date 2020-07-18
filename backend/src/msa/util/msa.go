@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"msa/types"
 	"os"
@@ -35,16 +36,21 @@ func removeFile(path, allowedPath string) {
 }
 
 func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Config) (msa types.MultiStepAttack, err error) {
-	outPath := path.Join(config.OutPath, msar.Name)
-	os.MkdirAll(outPath, os.ModePerm)
+	parentOutPath := path.Join(config.OutPath, msar.Name)
+	os.MkdirAll(parentOutPath, os.ModePerm)
 
 	msa.Name = msar.Name
 	msa.TraceFiles = make(types.TraceFiles)
 	msa.Attacks = make(types.Attacks)
 
 	msa.TimeLine = make([]types.TimeLineDay, len(msar.TimeLine))
+	pathsPerDay := make([]string, len(msar.TimeLine))
+
 	for i := range msa.TimeLine {
 		msa.TimeLine[i] = make([]types.TimeLineEntry, len(msar.TimeLine[i]))
+
+		pathsPerDay[i] = path.Join(parentOutPath, fmt.Sprintf("day-%d", i+1))
+		os.MkdirAll(pathsPerDay[i], os.ModePerm)
 	}
 
 	var tf types.TraceFile
@@ -61,6 +67,8 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 	currentDate := prevTraceFile.FirstPacket
 	// connection of timestamps in the PCAPs
 	for i, day := range msar.TimeLine {
+		outPath := pathsPerDay[i]
+
 		for e, entry := range day {
 			if entry.Type == "traceFile" {
 				tf, err = SetDate(currentDate, config.TraceFiles[entry.Id], outPath)
@@ -88,6 +96,8 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 	// IP address replacements
 	if len(msar.Replacements) != 0 {
 		for i, day := range msa.TimeLine {
+			outPath := pathsPerDay[i]
+
 			for e, entry := range day {
 				if entry.Type == "traceFile" {
 					tf, err = ReplaceInFile(msar.Replacements, msa.TraceFiles[entry.Id], outPath)
