@@ -14,9 +14,13 @@ func Replace(replacements, inFile, outFile string) (tfNew types.TraceFile, err e
 	if replacements == "" {
 		return tfNew, errors.New("Empty replacements string")
 	}
+	if inFile == "" || outFile == "" {
+		log.Printf("infile: %v, outFile: %v", inFile, outFile)
+		return tfNew, errors.New("Empty in or outfile")
+	}
 
 	cmd := exec.Command("tcprewrite", "--infile="+inFile, "--outfile="+outFile, "--srcipmap="+replacements, "--dstipmap="+replacements)
-	log.Printf("Going to execute:       %v", cmd.Args)
+	log.Printf("exec: %v", cmd.Args)
 	err = cmd.Run()
 	if err != nil {
 		return
