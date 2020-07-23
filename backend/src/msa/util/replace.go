@@ -15,12 +15,14 @@ func Replace(replacements, inFile, outFile string) (tfNew types.TraceFile, err e
 		return tfNew, errors.New("Empty replacements string")
 	}
 	if inFile == "" || outFile == "" {
-		log.Printf("infile: %v, outFile: %v", inFile, outFile)
-		return tfNew, errors.New("Empty in or outfile")
+		// FIXME: This should not happen.. need to debug via trace id to find out what goes wrong here
+		log.Printf("[BUG] EMPTY PATH ARGUMENT, discarding: infile: %v, outFile: %v", inFile, outFile)
+		return
 	}
 
-	cmd := exec.Command("tcprewrite", "--infile="+inFile, "--outfile="+outFile, "--srcipmap="+replacements, "--dstipmap="+replacements)
+	cmd := exec.Command("tcprewrite", "-i", inFile, "-o", outFile, "-N", replacements)
 	log.Printf("exec: %v", cmd.Args)
+
 	err = cmd.Run()
 	if err != nil {
 		return
