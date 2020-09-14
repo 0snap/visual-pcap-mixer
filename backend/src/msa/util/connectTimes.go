@@ -76,7 +76,14 @@ func ConnectAttackTimes(tfA types.TraceFile, atk types.Attack, traceFiles types.
 }
 
 func applyTimeDiff(timeDiff time.Duration, tf types.TraceFile, outFile string) (tfNew types.TraceFile, err error) {
-	cmd := exec.Command("editcap", "-F", "pcap", "-t", fmt.Sprintf("%f", timeDiff.Seconds()), tf.Path, outFile)
+	var cmd *exec.Cmd
+	if timeDiff != 0 {
+		// Normal case: invoke editcap
+		cmd = exec.Command("editcap", "-F", "pcap", "-t", fmt.Sprintf("%f", timeDiff.Seconds()), tf.Path, outFile)
+	} else {
+		// No time diff required: just cp
+		cmd = exec.Command("cp", tf.Path, outFile)
+	}
 	log.Printf("exec: %v", cmd.Args)
 
 	err = cmd.Run()
