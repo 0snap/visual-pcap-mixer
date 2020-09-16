@@ -60,7 +60,7 @@ func ReplaceInAllFiles(replacements []types.Replacement, tfs []types.TraceFile, 
 	return
 }
 
-func ReplaceInAttack(replacements []types.Replacement, atk types.Attack, allTraceFiles types.TraceFiles, outPath string) (atkNew types.Attack, tfsNew []types.TraceFile, err error) {
+func ReplaceInAttack(replacements []types.Replacement, atk types.Attack, traces []types.TraceFile, outPath string) (atkNew types.Attack, tfsNew []types.TraceFile, err error) {
 	atkNew.Name = atk.Name
 	atkNew.Start = atk.Start
 	atkNew.End = atk.End
@@ -86,11 +86,7 @@ func ReplaceInAttack(replacements []types.Replacement, atk types.Attack, allTrac
 		atkNew.Victims = append(atkNew.Victims, victim)
 	}
 
-	var tfs []types.TraceFile
-	for _, traceId := range atk.Traces {
-		tfs = append(tfs, allTraceFiles[traceId])
-	}
-	tfsNew, err = ReplaceInAllFiles(replacements, tfs, outPath)
+	tfsNew, err = ReplaceInAllFiles(replacements, traces, outPath)
 	if err != nil {
 		return
 	}

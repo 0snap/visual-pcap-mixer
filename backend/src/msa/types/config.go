@@ -21,7 +21,7 @@ type TraceFile struct {
 	BytesPerSecond   float64   `json:"bytesPerSecond"`
 	Id               uint32    `json:"id"`
 	AttackTrace      bool      `json:"attackTrace"`
-	MostFrequentIp	     string  `json:"mostFrequentIp"`
+	MostFrequentIp   string    `json:"mostFrequentIp"`
 }
 
 type Attack struct {
