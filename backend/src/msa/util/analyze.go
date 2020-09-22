@@ -52,7 +52,7 @@ func AnalyzeTraceFile(tf types.TraceFile) (types.TraceFile, error) {
 	tcpDumpRes := strings.Split(out.String(), "\n")
 	for _, line := range tcpDumpRes {
 		parts := strings.Split(line, " > ")
-		if (len(parts) != 2) {
+		if len(parts) != 2 {
 			continue
 		}
 		sa := strings.Split(parts[0], " ")

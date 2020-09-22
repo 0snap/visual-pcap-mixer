@@ -1,13 +1,18 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
+	"log"
 	"msa/types"
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
+
+const MAX_WORKERS int = 50
 
 func copyTraceFile(tf types.TraceFile, outPath string) (tfNew types.TraceFile, err error) {
 	outFile := path.Join(outPath, path.Base(tf.Path))
@@ -34,22 +39,112 @@ func removeFile(path, allowedPath string) {
 	}
 }
 
-func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Config) (msa types.MultiStepAttack, err error) {
-	outPath := path.Join(config.OutPath, msar.Name)
-	os.MkdirAll(outPath, os.ModePerm)
+type Item struct {
+	Date  time.Time
+	Day   int
+	Index int
+	Path  string
+	Entry types.TimeLineEntry
+}
 
-	msa.Name = msar.Name
+type TraceResult struct {
+	Day   int
+	Index int
+	Trace types.TraceFile
+}
+
+type AttackResult struct {
+	Day    int
+	Index  int
+	Attack types.Attack
+	Traces []types.TraceFile
+}
+
+func processTrace(tf *types.TraceFile, item Item, repl *[]types.Replacement) TraceResult {
+	// 1. Adjust timestamps
+	tfNew, err := SetDate(item.Date, *tf, item.Path)
+	if err != nil {
+		log.Fatalf("Error during time adjustment for %v: %v", tf.Path, err)
+	}
+
+	if len(*repl) != 0 {
+		// Save path of the trace to delete later
+		tfPath := tfNew.Path
+
+		// 2. Replace IPs
+		tfNew, err = ReplaceInFile(*repl, tfNew, item.Path)
+		if err != nil {
+			log.Fatalf("Error during IP replacement for %v: %v", tfNew.Path, err)
+		}
+
+		// Remove old file
+		removeFile(tfPath, item.Path)
+	}
+
+	return TraceResult{item.Day, item.Index, tfNew}
+}
+
+func processAttack(atk *types.Attack, traces *map[uint32]types.TraceFile, item Item, repl *[]types.Replacement) AttackResult {
+	// 1. Adjust timestamps
+	atkNew, tfs, err := SetAttackDate(item.Date, *atk, *traces, item.Path)
+	if err != nil {
+		log.Fatalf("Error during time adjustment for %v: %v", atk.Name, err)
+	}
+
+	if len(*repl) != 0 {
+		// Save paths of the traces to delete later
+		tfPaths := make([]string, 0, len(tfs))
+		for _, tf := range tfs {
+			tfPaths = append(tfPaths, tf.Path)
+		}
+
+		// 2. Replace IPs
+		atkNew, tfs, err = ReplaceInAttack(*repl, atkNew, tfs, item.Path)
+		if err != nil {
+			log.Fatalf("Error during IP replacement for %v: %v", atk.Name, err)
+		}
+
+		// Remove old files
+		for _, p := range tfPaths {
+			removeFile(p, item.Path)
+		}
+	}
+
+	return AttackResult{item.Day, item.Index, atkNew, tfs}
+}
+
+func processItem(item Item, traces *map[uint32]types.TraceFile, attacks *map[uint32]types.Attack, repl *[]types.Replacement, tfRes chan<- TraceResult, atkRes chan<- AttackResult) {
+	if item.Entry.Type == "traceFile" {
+		tf := (*traces)[item.Entry.Id]
+		res := processTrace(&tf, item, repl)
+		tfRes <- res
+	} else if item.Entry.Type == "attack" {
+		atk := (*attacks)[item.Entry.Id]
+		res := processAttack(&atk, traces, item, repl)
+		atkRes <- res
+	}
+}
+
+// FIXME: This effectively crashes on error and does not properly use `err`. Might want to revisit that
+func GenerateMultiStepAttack(req types.MultiStepAttackRequest, config types.Config) (msa types.MultiStepAttack, err error) {
+	parentOutPath := path.Join(config.OutPath, req.Name)
+	os.MkdirAll(parentOutPath, os.ModePerm)
+
+	msa.Name = req.Name
 	msa.TraceFiles = make(types.TraceFiles)
 	msa.Attacks = make(types.Attacks)
 
-	msa.TimeLine = make([]types.TimeLineDay, len(msar.TimeLine))
+	msa.TimeLine = make([]types.TimeLineDay, len(req.TimeLine))
+	pathsPerDay := make([]string, len(req.TimeLine))
+
 	for i := range msa.TimeLine {
-		msa.TimeLine[i] = make([]types.TimeLineEntry, len(msar.TimeLine[i]))
+		msa.TimeLine[i] = make([]types.TimeLineEntry, len(req.TimeLine[i]))
+
+		pathsPerDay[i] = path.Join(parentOutPath, fmt.Sprintf("day-%d", i+1))
+		os.MkdirAll(pathsPerDay[i], os.ModePerm)
 	}
 
-	var tf types.TraceFile
-
-	firstDay := msar.TimeLine[0]
+	firstDay := req.TimeLine[0]
 	firstEntry := firstDay[0]
 	prevTraceFile := config.TraceFiles[firstEntry.Id]
 	if firstEntry.Type == "attack" {
@@ -58,64 +153,77 @@ func GenerateMultiStepAttack(msar types.MultiStepAttackRequest, config types.Con
 		prevTraceFile = config.TraceFiles[lastId]
 	}
 
-	currentDate := prevTraceFile.FirstPacket
-	// connection of timestamps in the PCAPs
-	for i, day := range msar.TimeLine {
-		for e, entry := range day {
-			if entry.Type == "traceFile" {
-				tf, err = SetDate(currentDate, config.TraceFiles[entry.Id], outPath)
-				if err != nil {
-					return
-				}
-				msa.TraceFiles[tf.Id] = tf
-				msa.TimeLine[i][e] = types.TimeLineEntry{"traceFile", tf.Id}
-			} else if entry.Type == "attack" {
-				atk, tfs, err := SetAttackDate(currentDate, config.Attacks[entry.Id], config.TraceFiles, outPath)
-				if err != nil {
-					return msa, err
-				}
-				msa.Attacks[atk.Id] = atk
-				for _, tf := range tfs {
-					msa.TraceFiles[tf.Id] = tf
-					prevTraceFile = tf
-				}
-				msa.TimeLine[i][e] = types.TimeLineEntry{"attack", atk.Id}
+	startDate := prevTraceFile.FirstPacket
+
+	// Channels
+	items := make(chan Item, 10240)
+	tfResults := make(chan TraceResult, 64)
+	// FIXME: If we have more than 64 attacks, the loops below don't terminate..
+	atkResults := make(chan AttackResult, 64)
+	// WaitGroups
+	var wgIn sync.WaitGroup
+	var wgOut sync.WaitGroup
+
+	// Start worker goroutines
+	for i := 0; i < MAX_WORKERS; i++ {
+		go func() {
+			// Receive item to process
+			for item := range items {
+				wgIn.Done()
+				processItem(item, &config.TraceFiles, &config.Attacks, &req.Replacements, tfResults, atkResults)
+				wgOut.Done()
 			}
-		}
-		currentDate = currentDate.Add(time.Hour * 24)
+		}()
 	}
 
-	// IP address replacements
-	if len(msar.Replacements) != 0 {
-		for i, day := range msa.TimeLine {
-			for e, entry := range day {
-				if entry.Type == "traceFile" {
-					tf, err = ReplaceInFile(msar.Replacements, msa.TraceFiles[entry.Id], outPath)
-					if err != nil {
-						return
-					}
-					removeFile(msa.TraceFiles[entry.Id].Path, outPath)
-					delete(msa.TraceFiles, entry.Id)
-					msa.TraceFiles[tf.Id] = tf
-					msa.TimeLine[i][e] = types.TimeLineEntry{"traceFile", tf.Id}
-				} else if entry.Type == "attack" {
-					atk, tfs, err := ReplaceInAttack(msar.Replacements, msa.Attacks[entry.Id], msa.TraceFiles, outPath)
-					if err != nil {
-						return msa, err
-					}
-					msa.Attacks[atk.Id] = atk
-					for _, tf := range tfs {
-						msa.TraceFiles[tf.Id] = tf
-					}
-					for _, oldAtkTrace := range msa.Attacks[entry.Id].Traces {
-						removeFile(msa.TraceFiles[oldAtkTrace].Path, outPath)
-						delete(msa.TraceFiles, oldAtkTrace)
-					}
-					delete(msa.Attacks, entry.Id)
-					msa.TimeLine[i][e] = types.TimeLineEntry{"attack", atk.Id}
-				}
-			}
+	// Enqueue all entries across all days
+	for day, entries := range req.TimeLine {
+		outPath := pathsPerDay[day]
+		date := startDate.Add(time.Hour * 24 * time.Duration(day))
+
+		// Add number of entries to WaitGroups
+		numEntries := len(entries)
+		wgIn.Add(numEntries)
+		wgOut.Add(numEntries)
+
+		// Enqueue entries as items
+		for idx, entry := range entries {
+			items <- Item{date, day, idx, outPath, entry}
 		}
+	}
+
+	// Wait for all input items to be consumed and close input channel
+	go func() {
+		// This terminates idle workers once all items have been retrieved
+		// It also has to be in a goroutine to not block the main thread
+		wgIn.Wait()
+		close(items)
+	}()
+	// Wait for all workers to finish and close output channels
+	go func() {
+		// This is required as the range loops below don't exit otherwise
+		// It also has to be in a goroutine to not block the main thread
+		wgOut.Wait()
+		close(tfResults)
+		close(atkResults)
+	}()
+
+	// Collect results and update resulting MSA
+	for result := range tfResults {
+		tf := result.Trace
+
+		msa.TraceFiles[tf.Id] = tf
+		msa.TimeLine[result.Day][result.Index] = types.TimeLineEntry{"traceFile", tf.Id}
+	}
+
+	for result := range atkResults {
+		atk := result.Attack
+
+		msa.Attacks[atk.Id] = atk
+		for _, tf := range result.Traces {
+			msa.TraceFiles[tf.Id] = tf
+		}
+		msa.TimeLine[result.Day][result.Index] = types.TimeLineEntry{"attack", atk.Id}
 	}
 
 	return msa, nil
